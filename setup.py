@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    version="1.0.0",
+    version="1.0.1",
     name="telegram-notifier",
     description="Telegram Notifier executes bash commands and monitors them.",
     author="Vicent Ahuir",

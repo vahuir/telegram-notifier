@@ -15,11 +15,42 @@ import time
 import argparse
 import asyncio
 import platform
+import itertools
 
 from typing import Optional
 from datetime import datetime
 
 import telegram
+
+
+def format_seconds(seconds: int):
+    assert seconds >= 0
+
+    if seconds == 0:
+        return "0s"
+
+    divisors = (60, 60, 24)
+    values = []
+
+    value = seconds
+
+    for d in divisors:
+        value, mod = divmod(value, d)
+        values.append(mod)
+
+    values.append(value)
+    values.reverse()
+
+    non_zero = tuple(
+        itertools.dropwhile(lambda x: not x[0], zip(values, 'dhms'))
+    )
+    format_str = " ".join([r"{:0>2}{}"] * max(1, len(non_zero)))
+
+    formated = format_str.format(
+        *itertools.chain.from_iterable(non_zero)
+    )
+
+    return formated
 
 
 def get_bot_token(bot_token_file: str) -> Optional[str]:
@@ -29,7 +60,7 @@ def get_bot_token(bot_token_file: str) -> Optional[str]:
         token_id = open(path).readlines()[0].strip()
 
         return token_id
-    
+
     return None
 
 
@@ -40,11 +71,11 @@ def get_chat_id(chat_id_file: str) -> Optional[int]:
         chat_id = int(open(path).readlines()[0].strip())
 
         return chat_id
-    
+
 
 async def send_message(bot: telegram.Bot, chat_id:int, text: str) -> None:
     now = datetime.now().strftime("%b %d %Y %H:%M:%S")
-    
+
     async with bot:
         await bot.send_message(
             chat_id=chat_id,
@@ -54,11 +85,11 @@ async def send_message(bot: telegram.Bot, chat_id:int, text: str) -> None:
 
 
 async def ping_message(
-    process_name, ping_time, bot, chat_id, flag
+    process_name, ping_time, bot, chat_id, t1, flag
 ):
     remaning = ping_time
 
-    while ping_time > 0: 
+    while ping_time > 0:
         await asyncio.sleep(1)
 
         if not flag[0]:
@@ -67,13 +98,18 @@ async def ping_message(
         remaning -= 1
 
         if remaning == 0:
+            t2 = time.time()
+            seconds = int(t2 - t1)
+            time_str = format_seconds(seconds)
+
             await send_message(
-                bot, chat_id, f"`{process_name}`\n\nStill running… 🦾"
+                bot, chat_id,
+                f"`{process_name}`\n\nProcess running for {time_str} 🦾"
             )
             remaning = ping_time
 
 
-async def read_stream(stream, cb, flag):  
+async def read_stream(stream, cb, flag):
     while True:
         line = await stream.readline()
         if line:
@@ -84,13 +120,14 @@ async def read_stream(stream, cb, flag):
     flag[0] = False
 
 
-async def stream_subprocess(cmd, process_name, bot, chat_id, ping_time):  
+async def stream_subprocess(cmd, process_name, bot, chat_id, ping_time):
     process = await asyncio.create_subprocess_exec(
         *cmd,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE
     )
 
+    t1 = time.time()
     flag = [True]
 
     stdout_cb = lambda x: print(x, file=sys.stdout, end="")
@@ -99,10 +136,13 @@ async def stream_subprocess(cmd, process_name, bot, chat_id, ping_time):
     await asyncio.gather(
         read_stream(process.stdout, stdout_cb, flag),
         read_stream(process.stderr, stderr_cb, flag),
-        ping_message(process_name, ping_time, bot, chat_id, flag)
+        ping_message(process_name, ping_time, bot, chat_id, t1, flag)
     )
 
-    return await process.wait()
+    result = await process.wait()
+    t2 = time.time()
+
+    return (result, int(t2 - t1))
 
 
 async def main(cmd, process_name, bot_token, chat_id, ping_time):
@@ -110,17 +150,28 @@ async def main(cmd, process_name, bot_token, chat_id, ping_time):
 
     bot = telegram.Bot(token=bot_token)
 
-    await send_message(bot, chat_id, f"`{process_name}`\n\nStarting process\! 🤖")
-    returncode = await stream_subprocess(cmd, process_name, bot, chat_id, ping_time)
+    await send_message(
+        bot, chat_id, f"`{process_name}`\n\nStarting process\! 🤖"
+    )
+
+    returncode, running_time = await stream_subprocess(
+        cmd, process_name, bot, chat_id, ping_time
+    )
 
     if returncode == 0:
-        message = f"`{process_name}`\n\nProcess finished correctly\! 😁\n\n\n"
+        message = (
+            f"`{process_name}`\n\nProcess finished correctly\! 😁\n"
+            f"It took {format_seconds(running_time)}\n"
+        )
 
     else:
-        message = f"`{process_name}`\n\nERROR\! 😰"
+        message = (
+            f"`{process_name}`\n\nERROR\! 😰\n"
+            f"It failed after {format_seconds(running_time)}\n"
+        )
 
     await send_message(bot, chat_id, message)
-    
+
     return returncode
 
 
