@@ -77,11 +77,15 @@ async def send_message(bot: telegram.Bot, chat_id:int, text: str) -> None:
     now = datetime.now().strftime("%b %d %Y %H:%M:%S")
 
     async with bot:
-        await bot.send_message(
-            chat_id=chat_id,
-            text=f"_{now}\ \- *{platform.node()}*_\n{text}",
-            parse_mode='MarkdownV2'
-        )
+        try:
+            await bot.send_message(
+                chat_id=chat_id,
+                text=f"_{now}\ \- *{platform.node()}*_\n{text}",
+                parse_mode='MarkdownV2'
+            )
+
+        except telegram.error.TimedOut:
+            pass
 
 
 async def ping_message(
