@@ -12,6 +12,7 @@ import io
 import os
 import sys
 import time
+import traceback
 import argparse
 import asyncio
 import platform
@@ -76,16 +77,19 @@ def get_chat_id(chat_id_file: str) -> Optional[int]:
 async def send_message(bot: telegram.Bot, chat_id:int, text: str) -> None:
     now = datetime.now().strftime("%b %d %Y %H:%M:%S")
 
-    async with bot:
-        try:
+    try:
+        async with bot:
             await bot.send_message(
                 chat_id=chat_id,
                 text=f"_{now}\ \- *{platform.node()}*_\n{text}",
                 parse_mode='MarkdownV2'
             )
 
-        except telegram.error.TimedOut:
-            pass
+    except Exception:
+        with open("~/telegram-notifier.err", "a") as ofile:
+            print("INI -------", file=ofile)
+            print(traceback.format_exc(), file=ofile)
+            print("END -------\n", file=ofile)
 
 
 async def ping_message(
