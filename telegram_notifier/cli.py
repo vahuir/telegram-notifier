@@ -112,7 +112,7 @@ async def ping_message(
 
             await send_message(
                 bot, chat_id,
-                f"`{process_name}`\n\nProcess running for {time_str} 🦾"
+                f"Process running for {time_str} 🦾`\n\n{process_name}`"
             )
             remaning = ping_time
 
@@ -131,6 +131,7 @@ async def read_stream(stream, cb, flag):
 async def stream_subprocess(cmd, process_name, bot, chat_id, ping_time):
     process = await asyncio.create_subprocess_exec(
         *cmd,
+        limit=2048*1024, # 2MB
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE
     )
@@ -159,7 +160,7 @@ async def main(cmd, process_name, bot_token, chat_id, ping_time):
     bot = telegram.Bot(token=bot_token)
 
     await send_message(
-        bot, chat_id, f"`{process_name}`\n\nStarting process\! 🤖"
+        bot, chat_id, f"Starting process\! 🤖\n\n`{process_name}`"
     )
 
     returncode, running_time = await stream_subprocess(
@@ -168,13 +169,13 @@ async def main(cmd, process_name, bot_token, chat_id, ping_time):
 
     if returncode == 0:
         message = (
-            f"`{process_name}`\n\nProcess finished correctly\! 😁\n"
+            f"Process finished correctly\! 😁\n\n`{process_name}`\n"
             f"It took {format_seconds(running_time)}\n"
         )
 
     else:
         message = (
-            f"`{process_name}`\n\nERROR\! 😰\n"
+            f"ERROR\! 😰\n\n`{process_name}`\n"
             f"It failed after {format_seconds(running_time)}\n"
         )
 
