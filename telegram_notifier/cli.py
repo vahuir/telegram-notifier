@@ -112,7 +112,7 @@ async def ping_message(
 
             await send_message(
                 bot, chat_id,
-                f"Process running for {time_str} 🦾`\n\n{process_name}`"
+                f"🦾 Process running for {time_str}`\n\n{process_name}`"
             )
             remaning = ping_time
 
@@ -160,7 +160,7 @@ async def main(cmd, process_name, bot_token, chat_id, ping_time):
     bot = telegram.Bot(token=bot_token)
 
     await send_message(
-        bot, chat_id, f"Starting process\! 🤖\n\n`{process_name}`"
+        bot, chat_id, f"🤖 Starting process\!\n\n`{process_name}`"
     )
 
     returncode, running_time = await stream_subprocess(
@@ -169,13 +169,13 @@ async def main(cmd, process_name, bot_token, chat_id, ping_time):
 
     if returncode == 0:
         message = (
-            f"Process finished correctly\! 😁\n\n`{process_name}`\n"
+            f"😁 Process finished correctly\!\n\n`{process_name}`\n"
             f"It took {format_seconds(running_time)}\n"
         )
 
     else:
         message = (
-            f"ERROR\! 😰\n\n`{process_name}`\n"
+            f"😰 ERROR\!\n\n`{process_name}`\n"
             f"It failed after {format_seconds(running_time)}\n"
         )
 
