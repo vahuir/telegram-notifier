@@ -119,11 +119,15 @@ async def ping_message(
 
 async def read_stream(stream, cb, flag):
     while True:
-        line = await stream.readline()
-        if line:
-            cb(line.decode("utf-8"))
-        else:
-            break
+        try:
+            line = await stream.readline()
+            if line:
+                cb(line.decode("utf-8"))
+            else:
+                break
+
+        except ValueError:
+            continue
 
     flag[0] = False
 
@@ -131,7 +135,6 @@ async def read_stream(stream, cb, flag):
 async def stream_subprocess(cmd, process_name, bot, chat_id, ping_time):
     process = await asyncio.create_subprocess_exec(
         *cmd,
-        limit=2048*1024, # 2MB
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE
     )
